@@ -24,9 +24,9 @@
 %-compile(export_all).
 
 -export([
-	 load_app_specs/0,
-	 update_app_specs/1,
-	 get_app_dir/3,
+	 load_specs/0,
+	 update_specs/0,
+	 get_appl_dir/3,
 	 exists/2,
 	 exists/3
 	]).
@@ -47,7 +47,7 @@
 %% Returns: non
 %% --------------------------------------------------------------------
 
-load_app_specs()->
+load_specs()->
     Result=case get_appfiles() of
 	       {error,Reason}->
 		   {error,Reason};
@@ -57,18 +57,18 @@ load_app_specs()->
 	   end,
     Result.
 
-update_app_specs(AppInfoList)->
+update_specs()->
     Result=case get_appfiles() of
 	       {error,Reason}->
 		   {error,Reason};
 	       {ok,AppFiles}->
 		   AppInfo=git_update_app_specs(AppFiles),
-		   case git_update_app_specs(AppFiles) of
+		   case git_update_app_specs(AppInfo) of
 		       []->
-			   {ok,AppInfoList};
+			   {ok,AppInfo};
 		       Updates->
 			   %ToDo		
-			   {ok,AppInfoList}
+			   {ok,Updates}
 		   end
 	   end,
     Result.
@@ -78,7 +78,7 @@ update_app_specs(AppInfoList)->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-get_app_dir(App,latest,AppInfo)->
+get_appl_dir(App,latest,AppInfo)->
     AppList=[{XApp,XVsn,AppDir}||{XApp,XVsn,AppDir}<-AppInfo,
 			App=:=XApp],
     SortedAppList=lists:reverse(lists:keysort(2,AppList)),
@@ -90,7 +90,7 @@ get_app_dir(App,latest,AppInfo)->
 	   end,
     Result;
 
-get_app_dir(App,Vsn,AppInfo)->
+get_appl_dir(App,Vsn,AppInfo)->
     AppDirList=[AppDir||{XApp,XVsn,AppDir}<-AppInfo,
 			{App,Vsn}=:={XApp,XVsn}],
     Result=case AppDirList of
@@ -111,7 +111,7 @@ exists(App,AppInfo)->
     lists:keymember(App,1,AppInfo).
  
 exists(App,Vsn,AppInfo)->
-    Result=case get_app_dir(App,Vsn,AppInfo) of
+    Result=case get_appl_dir(App,Vsn,AppInfo) of
 	       {error,_}->
 		   false;
 	       _ -> 
@@ -143,8 +143,8 @@ get_appfiles()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-git_load_app_specs(AppFiles)->
-    git_load_app_specs(AppFiles,[]).
+git_load_app_specs(AppInfo)->
+    git_load_app_specs(AppInfo,[]).
 
 git_load_app_specs([],LoadRes)->
     [{App,Vsn,AppDir}||{ok,App,Vsn,AppDir}<-LoadRes];

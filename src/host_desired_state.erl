@@ -30,7 +30,7 @@ start()->
     case MissingHosts of
 	[]->
 	    ok;
-	HostsToStart->
+	_HostsToStart->
 	    log:log(?Log_ticket("Missinghosts to start ",[MissingHosts])),
 	    ok	    
     end.

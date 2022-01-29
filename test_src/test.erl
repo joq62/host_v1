@@ -71,7 +71,7 @@ start()->
 %% --------------------------------------------------------------------
 
 setup()->
-    ok=test_nodes:start_nodes(),
+  %  ok=test_nodes:start_nodes(),
     ok.
 
 
