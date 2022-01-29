@@ -20,7 +20,8 @@
 %-compile(export_all).
 
 -export([
-	 start/1
+	 start/1,
+	 do_clone/1
 	]).
 
 
@@ -46,28 +47,30 @@ start([worker])->
     ok.
 
 do_clone()->
-    git_clone_host_files(),
-    git_clone_appl_files(),
-    git_clone_host(),
+    do_clone(node()).
+do_clone(Node)->
+    git_clone_host_files(Node),
+    git_clone_appl_files(Node),
+    git_clone_host(Node),
     ok.
 
-git_clone_host()->
-    os:cmd("rm -rf "++?HostDir),
-    os:cmd("git clone "++?HostGitPath),
+git_clone_host(Node)->
+    rpc:call(Node,os,cmd,["rm -rf "++?HostDir],5000),
+    rpc:call(Node,os,cmd,["git clone "++?HostGitPath],5000),
     HostEbin=filename:join(?HostDir,"ebin"),
-    true=code:add_patha(HostEbin),
+    true=rpc:call(Node,code,add_patha,[HostEbin],5000),
     ok.
 
-git_clone_host_files()->
-    os:cmd("rm -rf "++?HostFilesDir),
-    os:cmd("git clone "++?HostSpecsGitPath),
-    true=code:add_patha(?HostFilesDir),
+git_clone_host_files(Node)->
+    rpc:call(Node,os,cmd,["rm -rf "++?HostFilesDir],5000),
+    rpc:call(Node,os,cmd,["git clone "++?HostSpecsGitPath],5000),
+    true=rpc:call(Node,code,add_patha,[?HostFilesDir],5000),
     ok.
 
-git_clone_appl_files()->
-    os:cmd("rm -rf "++?ApplSpecsDir),
-    os:cmd("git clone "++?ApplSpecsGitPath),
-    true=code:add_patha(?ApplSpecsDir),
+git_clone_appl_files(Node)->
+    rpc:call(Node,os,cmd,["rm -rf "++?ApplSpecsDir],5000),
+    rpc:call(Node,os,cmd,["git clone "++?ApplSpecsGitPath],5000),
+    true=rpc:call(Node,code,add_patha,[?ApplSpecsDir],5000),
     ok.
 
 
@@ -76,18 +79,18 @@ git_clone_appl_files()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-latest_path(AppName)->
-    Result = case file:list_dir(?RootDir) of
-		 {error,Reason}->
-		     {error,Reason};
-		 {ok,Files}->
-		     Dirs=[File||File<-Files,
-				 filelib:is_dir(File)],
-		     case lists:reverse(lists:sort(Files)) of
-			 []->
-			     {error,[eexist,Dirs]};
-			 [Latest|_] ->
-			     {ok,filename:join(AppName,Latest)}
-		     end
-	     end,
-    Result.
+%latest_path(AppName)->
+%    Result = case file:list_dir(?RootDir) of
+%		 {error,Reason}->
+%		     {error,Reason};
+%		 {ok,Files}->
+%		     Dirs=[File||File<-Files,
+%				 filelib:is_dir(File)],
+%		     case lists:reverse(lists:sort(Files)) of
+%			 []->
+%			     {error,[eexist,Dirs]};
+%			 [Latest|_] ->
+%			     {ok,filename:join(AppName,Latest)}
+%		     end
+%	     end,
+ %   Result.

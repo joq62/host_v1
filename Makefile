@@ -5,6 +5,9 @@ all:
 	rm -rf host;
 	rm -rf test_appl_specs test_host_specs;
 	rm -rf  *~ */*~  erl_cra*;
+#	sd
+	cp ../sd/src/*.app ebin;
+	erlc -D unit_test -I ../infra/log_server/include -o ebin ../sd/src/*.erl;
 #	application
 	cp src/*.app ebin;
 	erlc -I ../infra/log_server/include -I include -o ebin src/*.erl;
@@ -13,10 +16,14 @@ unit_test:
 	rm -rf ebin/* src/*.beam *.beam test_src/*.beam test_ebin;
 	rm -rf host dbase myadd mydivi;
 	rm -rf  *~ */*~  erl_cra*;
+	rm -rf host;
 	mkdir test_ebin;
 #	common
 #	cp ../common/src/*.app ebin;
-	erlc -D unit_test -I ../infra/log_server/include -o test_ebin ../common/src/*.erl;
+#	erlc -D unit_test -I ../infra/log_server/include -o test_ebin ../common/src/*.erl;
+#	sd
+	cp ../sd/src/*.app ebin;
+	erlc -D unit_test -I ../infra/log_server/include -o ebin ../sd/src/*.erl;
 #	Target application
 	cp src/*.app ebin;
 	erlc -D unit_test -I ../infra/log_server/include -I include -o ebin src/*.erl;

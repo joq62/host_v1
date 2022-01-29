@@ -53,9 +53,9 @@ start()->
     io:format("~p~n",[{"Stop  host_appl()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
 
-  %  io:format("~p~n",[{"Start sim_controller_1()",?MODULE,?FUNCTION_NAME,?LINE}]),
-%    ok= sim_controller_1(),
- %   io:format("~p~n",[{"Stop  sim_controller_1()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    io:format("~p~n",[{"Start dist_1()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok=dist_1(),
+    io:format("~p~n",[{"Stop  sim_controller_1()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
  %   
       %% End application tests
@@ -75,11 +75,12 @@ start()->
 host_init()->
     %% Config files and ebin for host is already loaded and the vm is started
     [H1|_]=test_nodes:get_nodes(),
+    ok=boot_host:do_clone(node()),
     
     %% Add path to configfiles
 
-    true=rpc:call(H1,code,add_patha,[?ApplSpecsDir],5000),
-    true=rpc:call(H1,code,add_patha,[?HostFilesDir],5000),
+%    true=rpc:call(H1,code,add_patha,[?ApplSpecsDir],5000),
+%    true=rpc:call(H1,code,add_patha,[?HostFilesDir],5000),
 
     ok=rpc:call(H1,application,set_env,[[{host,[{type,worker}]}]],5000),
     ok=rpc:call(H1,application,start,[host],5000),
@@ -102,6 +103,8 @@ host_appl()->
     % Test host initiated in host_init
     [H1|_]=test_nodes:get_nodes(),
     % Start a Vm  
+
+    
    
     {ok,N1}=rpc:call(H1,host,create,[],5000),
     false=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
@@ -118,6 +121,8 @@ host_appl()->
     42=rpc:call(N1,myadd,add,[20,22],1000),
     {error,{already_started,myadd}}=rpc:call(H1,host,start_appl,[myadd,N1],5000),    
     
+    [H1]=rpc:call(H1,sd,get,[host],5000),
+
     % stop an application 
     ok=rpc:call(H1,host,stop_appl,[myadd,N1],5000),
     true=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
@@ -128,7 +133,8 @@ host_appl()->
     false=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
     false=lists:keymember(myadd,1,rpc:call(N1,application,which_applications,[],1000)),
     {badrpc,_}=rpc:call(N1,myadd,add,[20,22],1000),
-
+    
+  
     ok.
     
 
@@ -182,8 +188,30 @@ appl_mgr()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
+dist_1()->
+    [H1,H2,H3]=test_nodes:get_nodes(),
+    ok=rpc:call(H2,application,set_env,[[{host,[{type,worker}]}]],5000),
+    ok=rpc:call(H2,application,start,[host],5000),
+    pong=rpc:call(H2,host,ping,[],2000),
+
+    ok=rpc:call(H3,application,set_env,[[{host,[{type,controller}]}]],5000),
+    ok=rpc:call(H3,application,start,[host],5000),
+    pong=rpc:call(H3,host,ping,[],2000),
+
+    [H1,H2,H3]=lists:sort(rpc:call(H1,sd,get,[host],2000)),
+    [H1,H2,H3]=lists:sort(rpc:call(H2,sd,get,[host],2000)),
+    [H1,H2,H3]=lists:sort(rpc:call(H3,sd,get,[host],2000)),
+
+    {state,worker}=rpc:call(H1,host,read_state,[],2000),
+    {state,worker}=rpc:call(H2,host,read_state,[],2000),
+    {state,controller}=rpc:call(H3,host,read_state,[],2000),
+    
+
+    ok.
+    
 
 
+    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc

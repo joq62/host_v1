@@ -62,6 +62,7 @@ init([]) ->
 
 children()->
     [?CHILD(host,worker),
+     ?CHILD(sd,worker),
      ?CHILD(appl_mgr,worker)
      ].
 %% ====================================================================

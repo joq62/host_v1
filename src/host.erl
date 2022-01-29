@@ -191,7 +191,7 @@ ping()->
 %% --------------------------------------------------------------------
 init([]) ->
     {ok,Type}=application:get_env(host,type),
-    io:format("Type ~p~n",[{Type,?FUNCTION_NAME,?MODULE,?LINE}]),
+  %  io:format("Type ~p~n",[{Type,?FUNCTION_NAME,?MODULE,?LINE}]),
     
 %    spawn(fun()->do_desired_state() end),
 %    rpc:cast(node(),log,log,[?Log_info("server started",[])]),
