@@ -31,6 +31,7 @@
 	 create/0,
 	 create/1,
 	 delete/1,
+	 read_state/0,
 	 ping/0
 	]).
 
@@ -44,6 +45,7 @@
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
+		type
 	       }).
 
 %% ====================================================================
@@ -154,6 +156,19 @@ delete(Vm)->
     gen_server:call(?SERVER, {delete,Vm},infinity).
 
 
+%% ====================================================================
+%% Support functions
+%% ====================================================================
+%%---------------------------------------------------------------
+%% Function:read_state()
+%% @doc: read theServer State variable      
+%% @param: non 
+%% @returns:State
+%%
+%%---------------------------------------------------------------
+-spec read_state()-> term().
+read_state()->
+    gen_server:call(?SERVER, {read_state},infinity).
 %% 
 %% @doc:check if service is running
 %% @param: non
@@ -175,10 +190,12 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+    {ok,Type}=application:get_env(host,type),
+    io:format("Type ~p~n",[{Type,?FUNCTION_NAME,?MODULE,?LINE}]),
     
 %    spawn(fun()->do_desired_state() end),
 %    rpc:cast(node(),log,log,[?Log_info("server started",[])]),
-    {ok, #state{}
+    {ok, #state{type=Type}
     }.
 
 %% --------------------------------------------------------------------
@@ -224,6 +241,10 @@ handle_call({delete,Vm},_From, State) ->
     Reply=rpc:call(node(),lib_vm,delete,[Vm],5000),
     {reply, Reply, State};
 
+
+handle_call({read_state},_From, State) ->
+    Reply=State,
+    {reply, Reply, State};
 handle_call({ping},_From, State) ->
     Reply=pong,
     {reply, Reply, State};

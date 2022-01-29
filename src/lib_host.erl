@@ -10,7 +10,7 @@
 %% Include files
 %% --------------------------------------------------------------------
 %-include("log.hrl").
-%-include("host.hrl").
+-include("configs.hrl").
 %%---------------------------------------------------------------------
 %% Records for test
 %%
@@ -24,6 +24,11 @@
 %-compile(export_all).
 
 -export([
+	 git_load_host_files/0,
+	 git_update_host_files/0,
+
+	 connect_nodes/0,
+	 
 	 load_appl/2,
 	 load_appl/3,
 	 unload_appl/2,
@@ -36,6 +41,39 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+connect_nodes()->
+    
+    not_implemented.
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+git_load_host_files()->
+    os:cmd("rm -rf "++?HostFilesDir),
+    os:cmd("git clone "++?HostSpecsGitPath),
+    ok.
+
+    
+git_update_host_files()->
+    {error,[not_implmented]}.
+		   
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+
+
+
+
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc

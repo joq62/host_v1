@@ -10,15 +10,12 @@
 %% Include files
 %% --------------------------------------------------------------------
 %-include("log.hrl").
--include("appl_mgr.hrl").
+%-include("appl_mgr.hrl").
+-include("configs.hrl").
 %%---------------------------------------------------------------------
 %% Records for test
 %%
-%-define(ScheduleInterval,20*1000).
-%-define(ConfigsGitPath,"https://github.com/joq62/configs.git").
-%-define(ConfigsDir,filename:join(?ApplMgrConfigDir,"configs")).
-%-define(ApplicationsDir,filename:join(?ConfigsDir,"applications")).
-%-define(ApplMgrConfigDir,"appl_mgr.dir").
+
 
 %% --------------------------------------------------------------------
 %-compile(export_all).
@@ -149,9 +146,10 @@ git_load_app_specs(AppInfo)->
 git_load_app_specs([],LoadRes)->
     [{App,Vsn,AppDir}||{ok,App,Vsn,AppDir}<-LoadRes];
 git_load_app_specs([{_File,FullPath}|T],Acc)->
-    App=appfile:read(FullPath,application),
-    Vsn=appfile:read(FullPath,vsn),
-    GitPath=appfile:read(FullPath,git_path),
+    
+    {ok,App}=appfile:read(FullPath,application),
+    {ok,Vsn}=appfile:read(FullPath,vsn),
+    {ok,GitPath}=appfile:read(FullPath,git_path),
     AppTopDir=atom_to_list(App),
     AppDir=filename:join(AppTopDir,Vsn),
     NewAcc=case filelib:is_dir(AppTopDir) of
@@ -186,9 +184,9 @@ git_update_app_specs(AppFiles)->
 git_update_app_specs([],LoadRes)->
     [{App,Vsn,AppDir}||{ok,App,Vsn,AppDir}<-LoadRes];
 git_update_app_specs([{_File,FullPath}|T],Acc)->
-    App=appfile:read(FullPath,application),
-    Vsn=appfile:read(FullPath,vsn),
-    GitPath=appfile:read(FullPath,git_path),
+    {ok,App}=appfile:read(FullPath,application),
+    {ok,Vsn}=appfile:read(FullPath,vsn),
+    {ok,GitPath}=appfile:read(FullPath,git_path),
     AppTopDir=atom_to_list(App),
     AppDir=filename:join(AppTopDir,Vsn),
     NewAcc=case filelib:is_dir(AppTopDir) of

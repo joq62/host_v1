@@ -1,7 +1,9 @@
 all:
 #	service
 	rm -rf ebin/* src/*.beam *.beam test_src/*.beam test_ebin;
-	rm -rf *.dir dbase my*;
+	rm -rf dbase myadd mydivi;
+	rm -rf host;
+	rm -rf test_appl_specs test_host_specs;
 	rm -rf  *~ */*~  erl_cra*;
 #	application
 	cp src/*.app ebin;

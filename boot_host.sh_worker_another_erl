@@ -1,0 +1,2 @@
+#!/bin/bash
+/snap/erlang/current/usr/bin/erl -pa boot_ebin -sname host -s boot_host start worker -setcookie cookie_test -detached
