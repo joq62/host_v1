@@ -1,0 +1,1 @@
+-define(ScheduleInterval,20*1000).
