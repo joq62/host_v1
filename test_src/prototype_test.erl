@@ -75,17 +75,21 @@ start()->
 host_init()->
     %% Config files and ebin for host is already loaded and the vm is started
     [H1|_]=test_nodes:get_nodes(),
-    ok=boot_host:do_clone(node()),
+    ok=rpc:call(H1,boot_host,start,[[worker]],5000),
+ 
+    init:stop(),
+    timer:sleep(1500),   
     
     %% Add path to configfiles
 
 %    true=rpc:call(H1,code,add_patha,[?ApplSpecsDir],5000),
 %    true=rpc:call(H1,code,add_patha,[?HostFilesDir],5000),
 
-    ok=rpc:call(H1,application,set_env,[[{host,[{type,worker}]}]],5000),
-    ok=rpc:call(H1,application,start,[host],5000),
-    pong=rpc:call(H1,host,ping,[],2000),
+  %  ok=rpc:call(H1,application,set_env,[[{host,[{type,worker}]}]],5000),
+  %  ok=rpc:call(H1,application,start,[host],5000),
+  %  pong=rpc:call(H1,host,ping,[],2000),
 
+ 
    % HostEbin=filename:join(?HostDir,"ebin"),
    % true=rpc:call(H1,code,add_patha,[HostEbin],5000),
    % ok=boot_host:start([worker]),
@@ -231,6 +235,8 @@ dist_1()->
 setup()->
   
     ok=test_nodes:start_nodes(),
+    HostEbin=filename:join("host","ebin"),
+    [rpc:call(N,code,add_patha,[HostEbin],5000)||N<-test_nodes:get_nodes()],
     
           
     ok.

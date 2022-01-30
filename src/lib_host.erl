@@ -48,6 +48,9 @@
 %% Returns: non
 %% --------------------------------------------------------------------
 connect_nodes()->
+ 
+    io:format("HostNodesFile ~p~n",[{?HostNodesFile,?FUNCTION_NAME,?MODULE,?LINE}]),
+    
     {ok,ContactNodes}=file:consult(?HostNodesFile),
     Res=[{N,net_adm:ping(N)}||N<-ContactNodes],
     Res.
