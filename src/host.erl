@@ -190,7 +190,21 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+    
+    ok=application:start(appl_mgr),
+    ok=application:start(sd),
+    
+
     {ok,Type}=application:get_env(host,type),
+    case application:get_env(host,type) of
+	{ok,worker}->
+	    rpc:cast(node(),worker,init,[]);
+	{ok,controller}->
+	    rpc:cast(node(),controller,init,[]);
+	undefined->
+	    init:stop()
+    end,
+		
   %  io:format("Type ~p~n",[{Type,?FUNCTION_NAME,?MODULE,?LINE}]),
     
 %    spawn(fun()->do_desired_state() end),

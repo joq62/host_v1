@@ -17,7 +17,12 @@
 -define(ApplSpecsGitPath,"https://github.com/joq62/appl_specs.git").
 -define(ApplSpecsDir,"appl_specs").
 -endif.
-
+%----------------------------------------------------------------
 -define(RootDir,".").
+
+%----------------------------------------------------------------
+-define(WorkerAppls,[myadd]).
+-define(ControllerAppls,[myadd,mydivi]).
+
 
 

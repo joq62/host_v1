@@ -170,8 +170,8 @@ appl_mgr()->
     % Test host initiated in host_init
     [H1|_]=test_nodes:get_nodes(),
     
-    {error,_}=rpc:call(H1,appl_mgr,get_appl_dir,[dbase,"1.0.0"],5000),
-    ok=rpc:call(H1,appl_mgr,load_specs,[],5000),
+    {ok,"dbase/1.0.0"}=rpc:call(H1,appl_mgr,get_appl_dir,[dbase,"1.0.0"],5000),
+%    ok=rpc:call(H1,appl_mgr,load_specs,[],5000),
 %    io:format(" ~p~n",[{appl_mgr:all_app_info(),?FUNCTION_NAME,?MODULE,?LINE}]),
     {ok,"dbase/1.0.0"}=rpc:call(H1,appl_mgr,get_appl_dir,[dbase,"1.0.0"],5000),
     {ok,"dbase/1.0.0"}=rpc:call(H1,appl_mgr,get_appl_dir,[dbase,latest],5000),
@@ -205,6 +205,9 @@ dist_1()->
     {state,worker}=rpc:call(H1,host,read_state,[],2000),
     {state,worker}=rpc:call(H2,host,read_state,[],2000),
     {state,controller}=rpc:call(H3,host,read_state,[],2000),
+    
+    io:format("sd:all ~p~n",[{rpc:call(H1,sd,all,[],2000),?FUNCTION_NAME,?MODULE,?LINE}]),
+    
     
 
     ok.

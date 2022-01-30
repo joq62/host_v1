@@ -61,9 +61,10 @@ init([]) ->
     }.
 
 children()->
-    [?CHILD(host,worker),
-     ?CHILD(sd,worker),
-     ?CHILD(appl_mgr,worker)
+    [
+    % ?CHILD(appl_mgr,worker),
+    % ?CHILD(sd,worker),
+     ?CHILD(host,worker)
      ].
 %% ====================================================================
 %% Internal functions

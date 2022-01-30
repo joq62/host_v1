@@ -4,58 +4,54 @@
 %%% 
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(appfile).  
+-module(worker).   
    
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
-
+%-include("log.hrl").
+%-include("appl_mgr.hrl").
+-include("configs.hrl").
 %%---------------------------------------------------------------------
 %% Records for test
 %%
 
+
 %% --------------------------------------------------------------------
 %-compile(export_all).
+
 -export([
-	 read/2
+	 init/0
 	]).
-	 
+
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
-read(AppFile,Type)->
-    Result=case file:consult(AppFile) of
-	       {ok,AllInfo}->
-		   read_app_file(AllInfo,Type);
-	       {error,Reason}->
-		   {error,Reason}
-	   end,
-    Result.
-
-read_app_file(AllInfo,all)->
-    {ok,AllInfo};
-read_app_file([{application,App,_}],application)->
-    {ok,App};
-read_app_file([{application,_,Info}],git_path) ->
-    {git_path,GitPath}=lists:keyfind(git_path,1,Info),
-    {ok,GitPath};
-read_app_file([{application,_,Info}],Key) ->
-   Result=case lists:keyfind(Key,1,Info) of
-	      {Key,Value}->
-		  {ok,Value};
-	      false->
-		  {error,[eexists,Key,?FUNCTION_NAME,?MODULE,?LINE]}
-	  end,
-    Result;
-read_app_file(Error,_) ->
-    {error,[unmatched_signal,Error,?FUNCTION_NAME,?MODULE,?LINE]}.
-
-
-
-
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
+init()->
+    Res=[create_load_start(Appl)||Appl<-?WorkerAppls],
+    io:format("Res ~p~n",[{Res,?FUNCTION_NAME,?MODULE,?LINE}]).
+   
+    
+    
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+create_load_start(Appl)->
+    {ok,Vm}=rpc:call(node(),host,create,[],5000),
+    % Load Start sd that always needs to be part of a Vm
+    ok=rpc:call(node(),host,load_appl,[sd,Vm],5000),
+    ok=rpc:call(node(),host,start_appl,[sd,Vm],5000),
+
+    % Load Start Appl that always needs to be part of a Vm
+    ok=rpc:call(node(),host,load_appl,[Appl,Vm],5000),
+    ok=rpc:call(node(),host,start_appl,[Appl,Vm],5000),
+    {ok,Appl}.
+    
