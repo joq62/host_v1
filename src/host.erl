@@ -193,7 +193,8 @@ init([]) ->
     
     ok=application:start(appl_mgr),
     ok=application:start(sd),
-    
+    Res=rpc:call(node(),lib_host,connect_nodes,[],5000),
+    io:format("connect  ~p~n",[{Res,?FUNCTION_NAME,?MODULE,?LINE}]),
     
 
     {ok,Type}=application:get_env(host,type),

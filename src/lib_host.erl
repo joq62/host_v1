@@ -48,8 +48,9 @@
 %% Returns: non
 %% --------------------------------------------------------------------
 connect_nodes()->
-    
-    not_implemented.
+    {ok,ContactNodes}=file:consult(?HostNodesFile),
+    Res=[{N,net_adm:ping(N)}||N<-ContactNodes],
+    Res.
 
 %% --------------------------------------------------------------------
 %% Function:start/0 

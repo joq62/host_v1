@@ -121,7 +121,7 @@ host_appl()->
     42=rpc:call(N1,myadd,add,[20,22],1000),
     {error,{already_started,myadd}}=rpc:call(H1,host,start_appl,[myadd,N1],5000),    
     
-    [H1]=rpc:call(H1,sd,get,[host],5000),
+   % [H1]=rpc:call(H1,sd,get,[host],5000),
 
     % stop an application 
     ok=rpc:call(H1,host,stop_appl,[myadd,N1],5000),

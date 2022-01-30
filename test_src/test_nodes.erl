@@ -35,7 +35,7 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
--define(NodeNames,["host0","host1","host2"]).
+-define(NodeNames,["h200","h201","h202"]).
 get_nodenames()->
     ?NodeNames.    
 get_nodes()->
