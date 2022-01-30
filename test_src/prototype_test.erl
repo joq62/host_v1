@@ -75,10 +75,10 @@ start()->
 host_init()->
     %% Config files and ebin for host is already loaded and the vm is started
     [H1|_]=test_nodes:get_nodes(),
-    ok=rpc:call(H1,boot_host,start,[[worker]],5000),
+    ok=rpc:call(H1,boot_host,start,[[worker]],10000),
  
-    init:stop(),
-    timer:sleep(1500),   
+ %   init:stop(),
+    timer:sleep(5000),   
     
     %% Add path to configfiles
 
@@ -152,17 +152,21 @@ host_vm()->
   % Test host initiated in host_init
     [H1|_]=test_nodes:get_nodes(),
   %  ok=application:start(host),
-    {ok,N1}=rpc:call(H1,host,create,[],5000),
+    [HostVm]=rpc:call(H1,sd,get,[host],5000),
+    {ok,N1}=rpc:call(HostVm,host,create,[],5000),
     pong=net_adm:ping(N1),
     Test1=test_1@c100,
-    {ok,Test1}=rpc:call(H1,host,create,["test_1"],5000),
+    {ok,Test1}=rpc:call(HostVm,host,create,["test_1"],5000),
     pong=net_adm:ping(Test1),
     
-    ok=rpc:call(H1,host,delete,[N1],5000),
+    ok=rpc:call(HostVm,host,delete,[N1],5000),
     pang=net_adm:ping(N1),
 
-    ok=rpc:call(H1,host,delete,[Test1]),
+    ok=rpc:call(HostVm,host,delete,[Test1]),
     pang=net_adm:ping(Test1),
+
+    init:stop(),
+    timer:sleep(1500),
 
     ok.
 %% --------------------------------------------------------------------
@@ -237,6 +241,7 @@ setup()->
     ok=test_nodes:start_nodes(),
     HostEbin=filename:join("host","ebin"),
     [rpc:call(N,code,add_patha,[HostEbin],5000)||N<-test_nodes:get_nodes()],
+    [rpc:call(N,application,start,[sd],5000)||N<-test_nodes:get_nodes()],
     
           
     ok.

@@ -3,7 +3,7 @@ all:
 	rm -rf ebin/* src/*.beam *.beam test_src/*.beam test_ebin;
 	rm -rf dbase myadd mydivi sd;
 	rm -rf host;
-	rm -rf test_appl_specs test_host_specs;
+	rm -rf appl_specs host_specs;
 	rm -rf  *~ */*~  erl_cra*;
 #	sd
 	cp ../sd/src/*.app ebin;
@@ -19,6 +19,7 @@ unit_test:
 	rm -rf ebin/* src/*.beam *.beam test_src/*.beam test_ebin;
 	rm -rf host dbase myadd mydivi sd;
 	rm -rf  *~ */*~  erl_cra*;
+	rm -rf appl_specs host_specs;
 	rm -rf host;
 	mkdir test_ebin;
 #	common

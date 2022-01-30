@@ -69,13 +69,13 @@ git_clone_host(Node)->
 
 git_clone_host_files(Node)->
     rpc:call(Node,os,cmd,["rm -rf "++?HostFilesDir],5000),
-    rpc:call(Node,os,cmd,["git clone "++?HostSpecsGitPath],5000),
+    rpc:call(Node,os,cmd,["git clone "++?HostSpecsGitPath++" "++?HostFilesDir],5000),
     true=rpc:call(Node,code,add_patha,[?HostFilesDir],5000),
     ok.
 
 git_clone_appl_files(Node)->
     rpc:call(Node,os,cmd,["rm -rf "++?ApplSpecsDir],5000),
-    rpc:call(Node,os,cmd,["git clone "++?ApplSpecsGitPath],5000),
+    rpc:call(Node,os,cmd,["git clone "++?ApplSpecsGitPath++" "++?ApplSpecsDir],5000),
     true=rpc:call(Node,code,add_patha,[?ApplSpecsDir],5000),
     ok.
 
