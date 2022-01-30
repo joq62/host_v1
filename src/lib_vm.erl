@@ -34,7 +34,7 @@
 %% --------------------------------------------------------------------
 create()->
     {ok,HostName}=net:gethostname(),
-    UniqueNodeName=integer_to_list(erlang:system_time(second)),
+    UniqueNodeName=integer_to_list(erlang:system_time(microsecond)),
     Cookie=atom_to_list(erlang:get_cookie()),
     PaArgs=" ",
     EnvArgs=" ",
