@@ -194,6 +194,7 @@ init([]) ->
     ok=application:start(appl_mgr),
     ok=application:start(sd),
     
+    
 
     {ok,Type}=application:get_env(host,type),
     case application:get_env(host,type) of
