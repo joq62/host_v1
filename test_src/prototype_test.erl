@@ -78,7 +78,7 @@ host_init()->
     ok=rpc:call(H1,boot_host,start,[[worker]],10000),
  
  %   init:stop(),
-    timer:sleep(5000),   
+  %  timer:sleep(5000),   
     
     %% Add path to configfiles
 
