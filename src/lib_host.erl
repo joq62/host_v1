@@ -34,9 +34,15 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-filter(Affinity,Constraints,HostInfo)->
-    AllCapabilites=capabilites_all(HostInfo),
-    do_filter(Affinity,Constraints,AllCapabilites).
+filter(Affinity,Constraints,HostInfoList)->
+    AllCapabilites=capabilites_all(HostInfoList),
+    
+    Candidates=[{proplists:get_value(id,HostInfo),
+		 proplists:get_value(node,HostInfo)}||Id<-do_filter(Affinity,Constraints,AllCapabilites),
+						      HostInfo<-HostInfoList,
+						      Id=:=proplists:get_value(id,HostInfo)],
+    
+    Candidates.
     
     
 do_filter([],[],AllCapabilites)->
