@@ -10,6 +10,7 @@
 %% Include files
 %% --------------------------------------------------------------------
 -include("log.hrl").
+%-include("controller.hrl").
 -include("configs.hrl").
 %% --------------------------------------------------------------------
 
@@ -36,28 +37,14 @@ start()->
 %    ok= boot(),
 %    io:format("~p~n",[{"Stop  boot()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
+    io:format("~p~n",[{"Start start_script()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok=start_script(),
+    io:format("~p~n",[{"Stop  start_script()",?MODULE,?FUNCTION_NAME,?LINE}]),
+
     io:format("~p~n",[{"Start host_init()",?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok= host_init(),
+    ok=host_init(),
     io:format("~p~n",[{"Stop  host_init()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
-    io:format("~p~n",[{"Start host_vm()",?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok= host_vm(),
-    io:format("~p~n",[{"Stop  host_vm()",?MODULE,?FUNCTION_NAME,?LINE}]),
-
-    io:format("~p~n",[{"Start appl_mgr()",?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok= appl_mgr(),
-    io:format("~p~n",[{"Stop  appl_mgr()",?MODULE,?FUNCTION_NAME,?LINE}]),
-
-    io:format("~p~n",[{"Start host_appl()",?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok= host_appl(),
-    io:format("~p~n",[{"Stop  host_appl()",?MODULE,?FUNCTION_NAME,?LINE}]),
-
-
-    io:format("~p~n",[{"Start dist_1()",?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok=dist_1(),
-    io:format("~p~n",[{"Stop  sim_controller_1()",?MODULE,?FUNCTION_NAME,?LINE}]),
-
- %   
       %% End application tests
   %  io:format("~p~n",[{"Start cleanup",?MODULE,?FUNCTION_NAME,?LINE}]),
     ok=cleanup(),
@@ -72,119 +59,139 @@ start()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
+start_script()->
+    % suppor debugging
+    ok=application:start(sd),
+
+    % Simulate host
+    ok=test_nodes:start_nodes(),
+    [Vm1|_]=test_nodes:get_nodes(),
+    
+    %simulate start script
+    % rm -rf loader
+    % git clone https://github.com/joq62/loader.git loader
+    % erl -pa loader/ebin -sname loader -setcookie cookie_test -s boot_loader start worker -detached 
+    
+    LoaderDir="loader",
+    LoaderGitPath="https://github.com/joq62/loader.git",
+    Ebin="loader/ebin",
+    
+    os:cmd("rm -rf "++LoaderDir),
+    os:cmd("git clone "++LoaderGitPath++" "++LoaderDir), 
+    true=rpc:call(Vm1,code,add_path,[Ebin],5000),
+    ok=rpc:call(Vm1,boot_loader,start,[[worker]],15000),
+    
+    pong=rpc:call(Vm1,loader,ping,[],2000),
+    ok.
+    
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
 host_init()->
-    %% Config files and ebin for host is already loaded and the vm is started
-    [H1|_]=test_nodes:get_nodes(),
-    ok=rpc:call(H1,boot_host,start,[[worker]],10000),
- 
- %   init:stop(),
-  %  timer:sleep(5000),   
+    ok=application:start(host),
     
-    %% Add path to configfiles
+    [{"c100",_},
+     {"c100",_},
+     {"c100",_}]=host:filter([],[]),
 
-%    true=rpc:call(H1,code,add_patha,[?ApplSpecsDir],5000),
-%    true=rpc:call(H1,code,add_patha,[?HostFilesDir],5000),
+    [{"c100","h201"}]=host:filter([{"c100","h201"}],[]),
 
-  %  ok=rpc:call(H1,application,set_env,[[{host,[{type,worker}]}]],5000),
-  %  ok=rpc:call(H1,application,start,[host],5000),
-  %  pong=rpc:call(H1,host,ping,[],2000),
-
- 
-   % HostEbin=filename:join(?HostDir,"ebin"),
-   % true=rpc:call(H1,code,add_patha,[HostEbin],5000),
-   % ok=boot_host:start([worker]),
-    
-    ok.
-    
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% -------------------------------------------------------------------
-
-host_vm()->
-  % Test host initiated in host_init
-    [H1|_]=test_nodes:get_nodes(),
-  %  ok=application:start(host),
-    [HostVm]=rpc:call(H1,sd,get,[host],5000),
-    {ok,N1}=rpc:call(HostVm,host,create,[],5000),
-    pong=net_adm:ping(N1),
-    Test1=test_1@c100,
-    {ok,Test1}=rpc:call(HostVm,host,create,["test_1"],5000),
-    pong=net_adm:ping(Test1),
-    
-    ok=rpc:call(HostVm,host,delete,[N1],5000),
-    pang=net_adm:ping(N1),
-
-    ok=rpc:call(HostVm,host,delete,[Test1]),
-    pang=net_adm:ping(Test1),
-
+    [{"c100","h202"}]=host:filter([],[{port,60000},{hw,glurk}]),
+    []=host:filter([{"c100","h201"}],[{port,60000},{hw,glurk}]),
     ok.
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
-appl_mgr()->
-    % Test host initiated in host_init
-    [H1|_]=test_nodes:get_nodes(),
-    [HostVm]=rpc:call(H1,sd,get,[host],5000),
-    {ok,"dbase/1.0.0"}=rpc:call(HostVm,appl_mgr,get_appl_dir,[dbase,"1.0.0"],5000),
-%    ok=rpc:call(H1,appl_mgr,load_specs,[],5000),
-%    io:format(" ~p~n",[{appl_mgr:all_app_info(),?FUNCTION_NAME,?MODULE,?LINE}]),
-    {ok,"dbase/1.0.0"}=rpc:call(HostVm,appl_mgr,get_appl_dir,[dbase,"1.0.0"],5000),
-    {ok,"dbase/1.0.0"}=rpc:call(HostVm,appl_mgr,get_appl_dir,[dbase,latest],5000),
+
+
+
+host_init_2()->
+    ok=application:start(host),
     
-   
-    {ok,"myadd/1.0.0"}=rpc:call(HostVm,appl_mgr,get_appl_dir,[myadd,"1.0.0"],5000),
-    {ok,"myadd/1.0.0"}=rpc:call(HostVm,appl_mgr,get_appl_dir,[myadd,latest],5000),
-   
+    % Controller sim
+    NeededAffinity={"c100","h201"},
+    NeededCapability=[{port,60000},{hw,glurk}],
+
+    Service0={"service_0","1.0.0",[],[]},
+    Service1={"service_1","1.0.0",[{"c100","h201"}],[]},
+    Service2={"service_2","1.0.0",[],[{port,60000},{hw,glurk}]},
+    
+    AllCapabilites=host:capabilites_all(),
+    {"service_0","1.0.0",
+     [{"c100",_},
+      {"c100",_},
+      {"c100",_}]}=filter({"service_0","1.0.0",[],[]},AllCapabilites),
+
+    {"service_1","1.0.0",[{"c100","h201"}]}=filter({"service_1","1.0.0",[{"c100","h201"}],[]},AllCapabilites),
+
+    {"service_2","1.0.0",[{"c100","h202"}]}=filter({"service_2","1.0.0",[],[{port,60000},{hw,glurk}]},AllCapabilites),
+    {"service_3","1.0.0",[]}=filter({"service_3","1.0.0",[{"c100","h201"}],[{port,60000},{hw,glurk}]},AllCapabilites),
+
+	    
     ok.
 
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% -------------------------------------------------------------------
-host_appl()->
+filter({ServiceId,Vsn,[],[]},AllCapabilites)->
+  %  io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+
+    Candidates=[Id||{Id,_}<-AllCapabilites],
+    {ServiceId,Vsn,Candidates};
+
+filter({ServiceId,Vsn,Affinity,[]},AllCapabilites)->
+   % io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    Candidates=[Id||{Id,_}<-AllCapabilites,XId<-Affinity,
+		    Id=:=XId],
+    {ServiceId,Vsn,Candidates};
+
+filter({ServiceId,Vsn,[],Constraints},AllCapabilites)->
+   % io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    {ServiceId,Vsn,filter1(AllCapabilites,Constraints)};
+
+filter({ServiceId,Vsn,Affinity,Constraints},AllCapabilites)->
+   % io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    Stage1=[{Id,Capabilities}||{Id,Capabilities}<-AllCapabilites,XId<-Affinity,
+		    Id=:=XId],
+    {ServiceId,Vsn,filter1(Stage1,Constraints)}.
+
+
+filter1(AllCapabilites,Constraints)->
+    filter1(AllCapabilites,Constraints,[]).
+
+filter1([],_,FilterStage1)->
+    FilterStage1;
+
+filter1([{Id,Capabilities}|T],Constraints,Acc)->
+
+ %   Test=[{X,Z}||X<-Capabilities,Z<-Constraints],
    
-    % Test host initiated in host_init
-    [H1|_]=test_nodes:get_nodes(),
-    % Start a Vm  
-
-    [H1|_]=test_nodes:get_nodes(),
-    [HostVm]=rpc:call(H1,sd,get,[host],5000),
-
-    {ok,N1}=rpc:call(HostVm,host,create,[],5000),
-    false=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
-    false=lists:keymember(myadd,1,rpc:call(N1,application,which_applications,[],1000)), 
-    % Load an application  
-    ok=rpc:call(HostVm,host,load_appl,[myadd,N1],5000),
-    true=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
-    false=lists:keymember(myadd,1,rpc:call(N1,application,which_applications,[],1000)),
-    % Start an application   
-    ok=rpc:call(HostVm,host,start_appl,[myadd,N1],5000),
-    true=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
-    true=lists:keymember(myadd,1,rpc:call(N1,application,which_applications,[],1000)),
-    % Test the application
-    42=rpc:call(N1,myadd,add,[20,22],1000),
-    {error,{already_started,myadd}}=rpc:call(HostVm,host,start_appl,[myadd,N1],5000),    
-    
-   % [H1]=rpc:call(H1,sd,get,[host],5000),
-
-    % stop an application 
-    ok=rpc:call(HostVm,host,stop_appl,[myadd,N1],5000),
-    true=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
-    false=lists:keymember(myadd,1,rpc:call(N1,application,which_applications,[],1000)),
-    {badrpc,_}=rpc:call(N1,myadd,add,[20,22],1000),
-    % Unload an application
-    ok=rpc:call(HostVm,host,unload_appl,[myadd,N1],5000),
-    false=lists:keymember(myadd,1,rpc:call(N1,application,loaded_applications,[],1000)),
-    false=lists:keymember(myadd,1,rpc:call(N1,application,which_applications,[],1000)),
-    {badrpc,_}=rpc:call(N1,myadd,add,[20,22],1000),
-    
+    L1=lists:sort([X||X<-Capabilities,Z<-Constraints,
+		      X=:=Z]),
+%    io:format("L1,lists:sort(Constraints) ~p~n",[{L1,lists:sort(Constraints)}]),
+%    io:format("L1=:=lists:sort(Constraints) ~p~n",[{L1=:=lists:sort(Constraints)}]),
   
-    ok.
+    NewAcc=case L1=:=lists:sort(Constraints) of
+	       true->
+		   [Id|Acc];
+	       false->
+		   Acc
+	   end,
+    filter1(T,Constraints,NewAcc).
+
+    
+
+
+
+init(Name,Vsn,Template,LoaderVm)->
+    {ok,ServiceVm}=rpc:call(LoaderVm,loader,create,[],10000),
+    %Fix
+    true=rpc:call(ServiceVm,code,add_patha,["ebin"],5000),
+    ok=rpc:call(ServiceVm,application,set_env,[[{service,[{id,{Name,Vsn}},{template,Template},{loader_vm,LoaderVm}]}]],5000),
+    ok=rpc:call(ServiceVm,application,start,[service],5000),
+    {ok,{{Name,Vsn},ServiceVm}}.
+  
     
 
 %% --------------------------------------------------------------------
@@ -195,21 +202,6 @@ host_appl()->
 dist_1()->
     [H1,H2,H3]=test_nodes:get_nodes(),
     io:format("sd:all ~p~n",[{rpc:call(H1,sd,all,[],2000),?FUNCTION_NAME,?MODULE,?LINE}]),
-
-    ok=rpc:call(H2,boot_host,start,[[controller]],10000),
-    ok=rpc:call(H3,boot_host,start,[[controller]],10000),
-   
-  %  [H1,H2,H3]=lists:sort(rpc:call(H1,sd,get,[host],2000)),
-  %  [H1,H2,H3]=lists:sort(rpc:call(H2,sd,get,[host],2000)),
-  %  [H1,H2,H3]=lists:sort(rpc:call(H3,sd,get,[host],2000)),
-
-  %  {state,worker}=rpc:call(H1,host,read_state,[],2000),
-  %  {state,worker}=rpc:call(H2,host,read_state,[],2000),
-  %  {state,controller}=rpc:call(H3,host,read_state,[],2000),
-    
-    io:format("sd:get(host) ~p~n",[{rpc:call(H1,sd,get,[host],2000),?FUNCTION_NAME,?MODULE,?LINE}]),
-    
-    
 
     ok.
     
@@ -231,12 +223,8 @@ dist_1()->
 %% --------------------------------------------------------------------
 setup()->
   
-    ok=test_nodes:start_nodes(),
-    HostEbin=filename:join("host","ebin"),
-    [rpc:call(N,code,add_patha,[HostEbin],5000)||N<-test_nodes:get_nodes()],
-    [rpc:call(N,application,start,[sd],5000)||N<-test_nodes:get_nodes()],
-    
           
+   
     ok.
 
 %% --------------------------------------------------------------------

@@ -22,15 +22,11 @@
 
 %% External exports
 -export([
-	 load_appl/2,
-	 load_appl/3,
-	 unload_appl/2,
-	 start_appl/2,
-	 stop_appl/2,
+	 filter/2,
 
-	 create/0,
-	 create/1,
-	 delete/1,
+	 capabilites_all/0,
+	 get_node/1,
+	 
 	 read_state/0,
 	 ping/0
 	]).
@@ -45,7 +41,7 @@
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
-		type
+		host_specs
 	       }).
 
 %% ====================================================================
@@ -66,94 +62,40 @@ stop()-> gen_server:call(?SERVER, {stop},infinity).
 %% ====================================================================
 
 %%---------------------------------------------------------------
-%% Function:load_appl(App)
-%% @doc: loads latest version of App to vm Vm      
-%% @param: Application and erlang vm to load 
-%% @returns:ok|{error,Reason}
+%% Function: filter(Affinity,Constraints)
+%% @doc: creates a list of hosts that fulfills Affinity and Constraints      
+%% @param: Affinity and Constraints
+%% @returns:[{Id,LoaderVm}]
 %%
 %%---------------------------------------------------------------
--spec load_appl(atom(),node())-> atom()|{atom(),term()}.
-load_appl(Appl,Vm)->
-    gen_server:call(?SERVER, {load_appl,Appl,Vm},infinity).
-%%---------------------------------------------------------------
-%% Function:load_appl(App,Vsn,Vm)
-%% @doc: loads Vsn version of App to vm Vm      
-%% @param: Application and erlang vm to load 
-%% @returns:ok|{error,Reason}
-%%
-%%---------------------------------------------------------------
--spec load_appl(atom(),string(),node())-> atom()|{atom(),term()}.
-load_appl(Appl,Vsn,Vm)->
-    gen_server:call(?SERVER, {load_appl,Appl,Vsn,Vm},infinity).
+-spec filter([term()],[term()])-> [{term(),node()}].
+filter(Affinity,Constraints)->
+    gen_server:call(?SERVER, {filter,Affinity,Constraints},infinity).
 
 %%---------------------------------------------------------------
-%% Function:start_appl(App,Vm)
-%% @doc: Start loaded application App on on vm Vm      
-%% @param: Application and erlang vm to start
-%% @returns:ok|{error,Reason}
+%% Function: capabilites_all()
+%% @doc: all nodes capabilites      
+%% @param: non 
+%% @returns:[{Id,Capabilities}]
 %%
 %%---------------------------------------------------------------
--spec start_appl(atom(),string())-> atom()|{atom(),term()}.
-start_appl(Appl,Vm)->
-    gen_server:call(?SERVER, {start_appl,Appl,Vm},infinity).
-
+-spec capabilites_all()-> [{term(),[term()]}].
+capabilites_all()->
+    gen_server:call(?SERVER, {capabilites_all},infinity).
 %%---------------------------------------------------------------
-%% Function:stop_appl(App,Vm)
-%% @doc: Stop loaded application App on on vm Vm      
-%% @param: Application and erlang vm to stop
-%% @returns:stopped|{error,Reason}
+%% Function:get_node(Id)
+%% @doc: get loader node for host with Id       
+%% @param: node Id 
+%% @returns:Vm|{error,Reason}
 %%
 %%---------------------------------------------------------------
--spec stop_appl(atom(),string())-> atom()|{atom(),term()}.
-stop_appl(Appl,Vm)->
-    gen_server:call(?SERVER, {stop_appl,Appl,Vm},infinity).
-
-%%---------------------------------------------------------------
-%% Function:unload_appl(App,Vm)
-%% @doc: Unload loaded application App on on vm Vm      
-%% @param: Application and erlang vm to unload
-%% @returns:ok|{error,Reason}
-%%
-%%---------------------------------------------------------------
--spec unload_appl(atom(),string())-> atom()|{atom(),term()}.
-unload_appl(Appl,Vm)->
-    gen_server:call(?SERVER, {unload_appl,Appl,Vm},infinity).
+-spec get_node(term())-> node()|{atom(),term()}.
+get_node(Id)->
+    gen_server:call(?SERVER, {get_node,Id},infinity).
 
 %% ====================================================================
 %% Vm machine functions
 %% ====================================================================
-
-%%---------------------------------------------------------------
-%% Function:create()
-%% @doc: creates a erlang slave node with a unique name and same cookie
-%%       as the host      
-%% @param: non
-%% @returns:{ok,NodeName}|{error,Reason}
-%%
-%%---------------------------------------------------------------
--spec create()-> {atom(),node()}|{atom(),term()}.
-create()->
-    gen_server:call(?SERVER, {create},infinity).
-%%---------------------------------------------------------------
-%% @doc: creates a erlang slave node with a unique nodename 
-%%       Unique_NodeName and same cookie as the host      
-%% @param: NodeName
-%% @returns:{ok,NodeName}|{error,Reason}
-%%
-%%---------------------------------------------------------------
--spec create(string())-> {atom(),node()}|{atom(),term()}.
-create(NodeName)->
-    gen_server:call(?SERVER, {create,NodeName},infinity).
-
-%%---------------------------------------------------------------
-%% @doc: delete an erlang slave node       
-%% @param: Node
-%% @returns:ok
-%%
-%%---------------------------------------------------------------
--spec delete(node())-> atom().
-delete(Vm)->
-    gen_server:call(?SERVER, {delete,Vm},infinity).
 
 
 %% ====================================================================
@@ -190,28 +132,12 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    
-    ok=application:start(appl_mgr),
-    ok=application:start(sd),
-    Res=rpc:call(node(),lib_host,connect_nodes,[],5000),
-    io:format("connect  ~p~n",[{Res,?FUNCTION_NAME,?MODULE,?LINE}]),
-    
-
-    {ok,Type}=application:get_env(host,type),
-    case application:get_env(host,type) of
-	{ok,worker}->
-	    rpc:cast(node(),worker,init,[]);
-	{ok,controller}->
-	    rpc:cast(node(),controller,init,[]);
-	undefined->
-	    init:stop()
-    end,
-		
+    HostSpecsInfo=lib_host:read_specs(),
   %  io:format("Type ~p~n",[{Type,?FUNCTION_NAME,?MODULE,?LINE}]),
     
 %    spawn(fun()->do_desired_state() end),
 %    rpc:cast(node(),log,log,[?Log_info("server started",[])]),
-    {ok, #state{type=Type}
+    {ok, #state{host_specs=HostSpecsInfo}
     }.
 
 %% --------------------------------------------------------------------
@@ -225,37 +151,19 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
-handle_call({load_appl,Appl,Vm},_From, State) ->
-    Reply=rpc:call(node(),lib_host,load_appl,[Appl,Vm],5000),
+handle_call({filter,Affinity,Constraints},_From, State) ->
+    Reply=lib_host:filter(Affinity,Constraints,State#state.host_specs),
     {reply, Reply, State};
 
-handle_call({load_appl,Appl,Vsn,Vm},_From, State) ->
-    Reply=rpc:call(node(),lib_host,load_appl,[Appl,Vsn,Vm],5000),
+
+handle_call({get_node,Id},_From, State) ->
+    Reply=lib_host:get_node(Id,State#state.host_specs),
     {reply, Reply, State};
 
-handle_call({unload_appl,Appl,Vm},_From, State) ->
-    Reply=rpc:call(node(),lib_host,unload_appl,[Appl,Vm],5000),
+handle_call({capabilites_all},_From, State) ->
+    Reply=lib_host:capabilites_all(State#state.host_specs),
     {reply, Reply, State};
 
-handle_call({start_appl,Appl,Vm},_From, State) ->
-    Reply=rpc:call(node(),lib_host,start_appl,[Appl,Vm],5000),
-    {reply, Reply, State};
-
-handle_call({stop_appl,Appl,Vm},_From, State) ->
-    Reply=rpc:call(node(),lib_host,stop_appl,[Appl,Vm],5000),
-    {reply, Reply, State};
-
-handle_call({create},_From, State) ->
-    Reply=rpc:call(node(),lib_vm,create,[],5000),
-    {reply, Reply, State};
-
-handle_call({create,NodeName},_From, State) ->
-    Reply=rpc:call(node(),lib_vm,create,[NodeName],5000),
-    {reply, Reply, State};
-
-handle_call({delete,Vm},_From, State) ->
-    Reply=rpc:call(node(),lib_vm,delete,[Vm],5000),
-    {reply, Reply, State};
 
 
 handle_call({read_state},_From, State) ->

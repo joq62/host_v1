@@ -11,29 +11,16 @@
 %% --------------------------------------------------------------------
 %-include("log.hrl").
 -include("configs.hrl").
-%%---------------------------------------------------------------------
-%% Records for test
-%%
-%-define(ScheduleInterval,20*1000).
-%-define(ConfigsGitPath,"https://github.com/joq62/configs.git").
-%-define(ConfigsDir,filename:join(?ApplMgrConfigDir,"configs")).
-%-define(ApplicationsDir,filename:join(?ConfigsDir,"applications")).
-%-define(ApplMgrConfigDir,"appl_mgr.dir").
 
 %% --------------------------------------------------------------------
 %-compile(export_all).
 
 -export([
-	 git_load_host_files/0,
-	 git_update_host_files/0,
-
-	 connect_nodes/0,
-	 
-	 load_appl/2,
-	 load_appl/3,
-	 unload_appl/2,
-	 start_appl/2,
-	 stop_appl/2
+	 filter/3,
+	 read_specs/0,
+	 get_node/2,
+	 capabilites_all/1
+	
 	
 	]).
 
@@ -47,86 +34,56 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-connect_nodes()->
- 
-    io:format("HostNodesFile ~p~n",[{?HostNodesFile,?FUNCTION_NAME,?MODULE,?LINE}]),
+filter(Affinity,Constraints,HostInfo)->
+    AllCapabilites=capabilites_all(HostInfo),
+    do_filter(Affinity,Constraints,AllCapabilites).
     
-    {ok,ContactNodes}=file:consult(?HostNodesFile),
-    Res=[{N,net_adm:ping(N)}||N<-ContactNodes],
-    Res.
-
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-git_load_host_files()->
-    os:cmd("rm -rf "++?HostFilesDir),
-    os:cmd("git clone "++?HostSpecsGitPath),
-    ok.
-
     
-git_update_host_files()->
-    {error,[not_implmented]}.
-		   
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
+do_filter([],[],AllCapabilites)->
+  %  io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    Candidates=[Id||{Id,_}<-AllCapabilites],
+    Candidates;
+
+do_filter(Affinity,[],AllCapabilites)->
+   % io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    Candidates=[Id||{Id,_}<-AllCapabilites,XId<-Affinity,
+		    Id=:=XId],
+    Candidates;
+
+do_filter([],Constraints,AllCapabilites)->
+   % io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    do_filter(AllCapabilites,Constraints);
+
+do_filter(Affinity,Constraints,AllCapabilites)->
+   % io:format("ServiceId ~p~n",[{ServiceId,?MODULE,?LINE}]),
+    Stage1=[{Id,Capabilities}||{Id,Capabilities}<-AllCapabilites,XId<-Affinity,
+		    Id=:=XId],
+    do_filter(Stage1,Constraints).
 
 
+do_filter(AllCapabilites,Constraints)->
+    do_filter_2(AllCapabilites,Constraints,[]).
 
+do_filter_2([],_,FilterStage1)->
+    FilterStage1;
 
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-load_appl(Appl,Vm)->
-    Result=case appl_mgr:get_appl_dir(Appl) of
-	       {error,Reason}->
-		   {error,Reason};
-	       {ok,ApplDirPath}->
-		   do_load(Appl,ApplDirPath,Vm)
-	   end,
-    Result.
+do_filter_2([{Id,Capabilities}|T],Constraints,Acc)->
 
-load_appl(Appl,Vsn,Vm)->
-    Result=case appl_mgr:get_appl_dir(Appl,Vsn) of
-	       {error,Reason}->
-		   {error,Reason};
-	       {ok,ApplDirPath}->
-		   do_load(Appl,ApplDirPath,Vm)
-	   end,
-    Result.    
-
-
-
-
-
-do_load(Appl,ApplDirPath,Vm)->
-    EbinPath=filename:join(ApplDirPath,"ebin"),
-    Result=case rpc:call(Vm,code,add_patha,[EbinPath],5000) of
-	       {Error,Reason}->
-		   {Error,Reason};
+ %   Test=[{X,Z}||X<-Capabilities,Z<-Constraints],
+   
+    L1=lists:sort([X||X<-Capabilities,Z<-Constraints,
+		      X=:=Z]),
+%    io:format("L1,lists:sort(Constraints) ~p~n",[{L1,lists:sort(Constraints)}]),
+%    io:format("L1=:=lists:sort(Constraints) ~p~n",[{L1=:=lists:sort(Constraints)}]),
+  
+    NewAcc=case L1=:=lists:sort(Constraints) of
 	       true->
-		   case rpc:call(Vm,application,load,[Appl],5000) of
-		       {Error,Reason}->
-			   {Error,Reason};
-		       ok->
-			   ok
-		   end
+		   [Id|Acc];
+	       false->
+		   Acc
 	   end,
-    Result.
-    
-    %% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-unload_appl(Appl,Vm)->
-    rpc:call(Vm,application,unload,[Appl],10*1000).
+    do_filter_2(T,Constraints,NewAcc).
+
 
 
 %% --------------------------------------------------------------------
@@ -134,15 +91,36 @@ unload_appl(Appl,Vm)->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-start_appl(Appl,Vm)->
-    rpc:call(Vm,application,start,[Appl],10*1000).
-
+get_node(Id,HostInfo)->
+    NodeList=[{proplists:get_value(node,I)}||I<-HostInfo,
+					     Id=:=proplists:get_value(id,I)],
+    case NodeList of
+	[]->
+	    {error,[eexists,Id]};
+	[Vm] ->
+	    Vm
+    end.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+capabilites_all(HostInfo)->
+    [{proplists:get_value(id,I),proplists:get_value(capabilities,I)}||I<-HostInfo].
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-stop_appl(Appl,Vm)->
-    rpc:call(Vm,application,stop,[Appl],10*1000).
+read_specs()->
+    {ok,Files}=file:list_dir(?HostFilesDir),
+    ServiceSepcFiles=[filename:join(?HostFilesDir,File)||File<-Files,
+							    ".host"=:=filename:extension(File)],
+    read_specs(ServiceSepcFiles,[]).
 
+read_specs([],List)->
+    List;
+read_specs([File|T],Acc) ->
+    {ok,Info}=file:consult(File),
+    read_specs(T,[Info|Acc]).
